@@ -3188,7 +3188,7 @@ idt_init(void) {
   101922:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%ebp)
   101929:	e9 c4 00 00 00       	jmp    1019f2 <idt_init+0xda>
     {
-        SETGATE(idt[i],0,GD_KTEXT,__vectors[i],DPL_KERNEL);
+        SETGATE(idt[i],0,KERNEL_CS,__vectors[i],DPL_KERNEL);
   10192e:	8b 45 fc             	mov    -0x4(%ebp),%eax
   101931:	8b 04 85 e0 f5 10 00 	mov    0x10f5e0(,%eax,4),%eax
   101938:	0f b7 d0             	movzwl %ax,%edx
@@ -3242,12 +3242,12 @@ idt_init(void) {
   1019f5:	3d ff 00 00 00       	cmp    $0xff,%eax
   1019fa:	0f 86 2e ff ff ff    	jbe    10192e <idt_init+0x16>
     }
-    SETGATE(idt[T_SWITCH_TOK], 0, GD_KTEXT, __vectors[T_SWITCH_TOK], DPL_USER);
+    SETGATE(idt[T_SWITCH_TOK], 0, USER_CS, __vectors[T_SWITCH_TOK], DPL_USER);
   101a00:	a1 c4 f7 10 00       	mov    0x10f7c4,%eax
   101a05:	0f b7 c0             	movzwl %ax,%eax
   101a08:	66 a3 68 04 11 00    	mov    %ax,0x110468
-  101a0e:	66 c7 05 6a 04 11 00 	movw   $0x8,0x11046a
-  101a15:	08 00 
+  101a0e:	66 c7 05 6a 04 11 00 	movw   $0x1b,0x11046a
+  101a15:	1b 00 
   101a17:	0f b6 05 6c 04 11 00 	movzbl 0x11046c,%eax
   101a1e:	24 e0                	and    $0xe0,%al
   101a20:	a2 6c 04 11 00       	mov    %al,0x11046c
