@@ -19,6 +19,29 @@ static void print_ticks() {
 #endif
 }
 
+
+void my_switch_to_user(struct trapframe* tf){
+    struct trapframe switchk2u = *tf;
+    switchk2u.tf_cs = USER_CS;
+    switchk2u.tf_ds = switchk2u.tf_es = switchk2u.tf_ss = USER_DS;
+    switchk2u.tf_esp = (uint32_t)tf + sizeof(struct trapframe) - 8;
+		
+    switchk2u.tf_eflags |= 0x00003000;
+		
+    *((uint32_t *)tf - 1) = (uint32_t)&switchk2u;
+    
+}
+
+void my_switch_to_kernel(struct trapframe * tf){
+    tf->tf_cs = KERNEL_CS;
+    tf->tf_ds = tf->tf_es = KERNEL_DS;
+    tf->tf_eflags &= ~(0x00003000);
+    struct trapframe* switchu2k = (struct trapframe *)(tf->tf_esp - (sizeof(struct trapframe) - 8));
+    memmove(switchu2k, tf, sizeof(struct trapframe) - 8);
+    *((uint32_t *)tf - 1) = (uint32_t)switchu2k;
+    
+}
+
 /* *
  * Interrupt descriptor table:
  *
@@ -51,7 +74,8 @@ idt_init(void) {
     {
         SETGATE(idt[i],0,KERNEL_CS,__vectors[i],DPL_KERNEL);
     }
-    SETGATE(idt[T_SWITCH_TOK], 0, USER_CS, __vectors[T_SWITCH_TOK], DPL_USER);
+    SETGATE(idt[T_SWITCH_TOK], 1, KERNEL_CS, __vectors[T_SWITCH_TOK], DPL_USER);
+    SETGATE(idt[T_SWITCH_TOU],1,KERNEL_CS,__vectors[T_SWITCH_TOU],DPL_KERNEL);
     lidt(&idt_pd);
 }
 
@@ -167,11 +191,27 @@ trap_dispatch(struct trapframe *tf) {
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
         cprintf("kbd [%03d] %c\n", c, c);
+        if(c=='0'&&tf->tf_cs!=KERNEL_CS) {
+            cprintf("switch to kernel \n");
+            my_switch_to_kernel(tf);
+            print_trapframe(tf);
+        }
+        else if(c=='3'&&tf->tf_cs!=USER_CS){
+            cprintf("switch to user \n");
+            my_switch_to_user(tf);
+            print_trapframe(tf);
+        }
         break;
     //LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
+        if(tf->tf_cs!=USER_CS)
+        {
+            my_switch_to_user(tf);
+        }
     case T_SWITCH_TOK:
-        panic("T_SWITCH_** ??\n");
+        if (tf->tf_cs != KERNEL_CS) {
+            my_switch_to_kernel(tf);
+        }
         break;
     case IRQ_OFFSET + IRQ_IDE1:
     case IRQ_OFFSET + IRQ_IDE2:
